@@ -29,6 +29,7 @@ import gtk
 import pango
 import subprocess
 import threading
+import os
 
 from config import SMLConsoleConfig
 
@@ -84,11 +85,16 @@ class SMLConsole(gtk.ScrolledWindow):
         self.stdout = OutFile(self, sys.stdout.fileno(), self.normal)
         self.stderr = OutFile(self, sys.stderr.fileno(), self.error)
 
+        startupInfo = None
+        if os.name == 'nt':
+            startupInfo = subprocess.STARTUPINFO()
+            startupInfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         self.sml = subprocess.Popen([SML_COMMAND, '-P', 'full'],
                                     stdin  = subprocess.PIPE,
                                     stdout = subprocess.PIPE,
                                     stderr = subprocess.PIPE,
-                                    shell = False)
+                                    shell = False,
+                                    startupinfo = startupInfo)
         
         def killSmlOnExit():
             self.sml.kill()
@@ -381,4 +387,3 @@ class OutFile:
     truncate = tell
 
 # ex:et:ts=4:
-
