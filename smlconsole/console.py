@@ -71,8 +71,6 @@ class SMLConsole(gtk.ScrolledWindow):
 
         # Init first line
         buffer.create_mark("input-line", buffer.get_end_iter(), True)
-        #buffer.insert(buffer.get_end_iter(), ">>> ")
-        buffer.create_mark("input", buffer.get_end_iter(), True)
         buffer.create_mark("input-end", buffer.get_end_iter(), False)
 
         # Init history
@@ -85,6 +83,35 @@ class SMLConsole(gtk.ScrolledWindow):
         self.stdout = OutFile(self, sys.stdout.fileno(), self.normal)
         self.stderr = OutFile(self, sys.stderr.fileno(), self.error)
 
+        self.start_sml()
+        
+        def killSmlOnExit():
+            self.sml.kill()
+            
+        import atexit
+        atexit.register(killSmlOnExit)
+       
+        def transfer_data(from_f, to_f):
+            while True:
+                try:
+                    c = from_f.read(1)
+                    if c == '\r': continue
+                    to_f.write(c)
+                except e:
+                    print e
+        
+        stdoutt = threading.Thread(target = transfer_data, args = (self.sml.stdout, self.stdout))
+        stdoutt.daemon = True
+        stdoutt.start()        
+        stderrt = threading.Thread(target = transfer_data, args = (self.sml.stderr, self.stderr))
+        stderrt.daemon = True
+        stderrt.start()
+                                    
+        # Signals
+        self.view.connect("key-press-event", self.__key_press_event_cb)
+        buffer.connect("mark-set", self.__mark_set_cb)
+
+    def start_sml(self):
         startupInfo = None
         if os.name == 'nt':
             startupInfo = subprocess.STARTUPINFO()
@@ -96,26 +123,6 @@ class SMLConsole(gtk.ScrolledWindow):
                                     shell = False,
                                     startupinfo = startupInfo)
         
-        def killSmlOnExit():
-            self.sml.kill()
-            
-        import atexit
-        atexit.register(killSmlOnExit)
-       
-        def transfer_data(from_f, to_f):
-            while True:
-                c = from_f.read(1)
-                if c == '\r': continue
-                to_f.write(c)
-        
-        stdoutt = threading.Thread(target = transfer_data, args = (self.sml.stdout, self.stdout))
-        stdoutt.daemon = True
-        stdoutt.start()
-                                    
-        # Signals
-        self.view.connect("key-press-event", self.__key_press_event_cb)
-        buffer.connect("mark-set", self.__mark_set_cb)
-
     def do_grab_focus(self):
         self.view.grab_focus()
 
@@ -137,7 +144,7 @@ class SMLConsole(gtk.ScrolledWindow):
         elif event.keyval == gtk.keysyms.Return and event_state == gtk.gdk.CONTROL_MASK:
             # Get the command
             buffer = view.get_buffer()
-            inp_mark = buffer.get_mark("input")
+            inp_mark = buffer.get_mark("input-line")
             inp = buffer.get_iter_at_mark(inp_mark)
             cur = buffer.get_end_iter()
             line = buffer.get_text(inp, cur)
@@ -146,7 +153,7 @@ class SMLConsole(gtk.ScrolledWindow):
 
             # Prepare the new line
             cur = buffer.get_end_iter()
-            buffer.insert(cur, "\n... ")
+            #buffer.insert(cur, "\n... ")
             cur = buffer.get_end_iter()
             buffer.move_mark(inp_mark, cur)
 
@@ -164,18 +171,13 @@ class SMLConsole(gtk.ScrolledWindow):
             # Get the marks
             buffer = view.get_buffer()
             lin_mark = buffer.get_mark("input-line")
-            inp_mark = buffer.get_mark("input")
             
-            inp = buffer.get_iter_at_mark(inp_mark)
-            lin = buffer.get_iter_at_mark(lin_mark)
-            print "Input line: line %d, offset %d" % (lin.get_line(), lin.get_line_offset())
-            print "Input     : line %d, offset %d" % (inp.get_line(), inp.get_line_offset())
-
             # Get the command line
             lin = buffer.get_iter_at_mark(lin_mark)
             cur = buffer.get_end_iter()
             line = buffer.get_text(lin, cur)
             self.current_command = self.current_command + line + "\n"
+            print repr(self.current_command)
             self.history_add(line)
 
             # Make the line blue
@@ -196,7 +198,6 @@ class SMLConsole(gtk.ScrolledWindow):
             buffer.move_mark(lin_mark, cur)
             buffer.insert(cur, com_mark)
             cur = buffer.get_end_iter()
-            buffer.move_mark(inp_mark, cur)
             buffer.place_cursor(cur)
             gobject.idle_add(self.scroll_to_end)
             return True
@@ -218,7 +219,7 @@ class SMLConsole(gtk.ScrolledWindow):
         elif event.keyval == gtk.keysyms.KP_Left or event.keyval == gtk.keysyms.Left or \
              event.keyval == gtk.keysyms.BackSpace:
             buffer = view.get_buffer()
-            inp = buffer.get_iter_at_mark(buffer.get_mark("input"))
+            inp = buffer.get_iter_at_mark(buffer.get_mark("input-line"))
             cur = buffer.get_iter_at_mark(buffer.get_insert())
             if inp.compare(cur) == 0:
                 if not event_state:
@@ -233,14 +234,14 @@ class SMLConsole(gtk.ScrolledWindow):
              event_state == event_state & (gtk.gdk.SHIFT_MASK|gtk.gdk.CONTROL_MASK):
             # Go to the begin of the command instead of the begin of the line
             buffer = view.get_buffer()
-            iter = buffer.get_iter_at_mark(buffer.get_mark("input"))
+            iter = buffer.get_iter_at_mark(buffer.get_mark("input-line"))
             ins = buffer.get_iter_at_mark(buffer.get_insert())
 
             while iter.get_char().isspace():
                 iter.forward_char()
 
             if iter.equal(ins):
-                iter = buffer.get_iter_at_mark(buffer.get_mark("input"))
+                iter = buffer.get_iter_at_mark(buffer.get_mark("input-line"))
 
             if event_state & gtk.gdk.SHIFT_MASK:
                 buffer.move_mark_by_name("insert", iter)
@@ -275,20 +276,20 @@ class SMLConsole(gtk.ScrolledWindow):
         mark_name = mark.get_name()
         if mark_name in ['input', 'input-line', 'tmp-input-line', None]: return
         
-        input = buffer.get_iter_at_mark(buffer.get_mark("input"))
+        input = buffer.get_iter_at_mark(buffer.get_mark("input-line"))
         pos   = buffer.get_iter_at_mark(buffer.get_insert())
         self.view.set_editable(pos.compare(input) != -1)
 
     def get_command_line(self):
         buffer = self.view.get_buffer()
-        inp = buffer.get_iter_at_mark(buffer.get_mark("input"))
+        inp = buffer.get_iter_at_mark(buffer.get_mark("input-line"))
         cur = buffer.get_end_iter()
         text = buffer.get_text(inp, cur)
         return text
 
     def set_command_line(self, command):
         buffer = self.view.get_buffer()
-        mark = buffer.get_mark("input")
+        mark = buffer.get_mark("input-line")
         inp = buffer.get_iter_at_mark(mark)
         cur = buffer.get_end_iter()
         buffer.delete(inp, cur)
@@ -351,7 +352,7 @@ class SMLConsole(gtk.ScrolledWindow):
         buffer.move_mark_by_name("input-line", cur)
         #buffer.insert(cur, ">>> ")
         cur = buffer.get_end_iter()
-        buffer.move_mark_by_name("input", cur)
+        buffer.move_mark_by_name("input-line", cur)
         self.view.scroll_to_iter(cur, 0.0)
 
     def __run(self, command):
