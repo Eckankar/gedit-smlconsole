@@ -1,0 +1,14 @@
+[Gedit Plugin]
+Loader=python
+Module=smlconsole
+IAge=2
+Name=SML Console
+Name[da]=SML-konsol
+Name[en_GB]=SML Console
+Description=Interactive SML console standing in the bottom panel
+Description[da]=Interaktiv SML-konsol i bundpanelet
+Description[en_GB]=Interactive SML console standing in the bottom panel
+Authors=Sebastian Paaske Tørholm <sebbe@diku.dk>
+Copyright=Copyright © 2012 Sebastian Paaske Tørholm
+Website=http://mathemaniac.org
+
