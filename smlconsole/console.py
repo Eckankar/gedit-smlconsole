@@ -44,9 +44,8 @@ class SMLConsole(gtk.ScrolledWindow):
 
     def __init__(self, namespace = {}):
         gtk.ScrolledWindow.__init__(self)
+        gtk.gdk.threads_init()
         
-        self.buffer_lock = threading.Lock()
-
         self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         self.set_shadow_type(gtk.SHADOW_IN)
         self.view = gtk.TextView()
@@ -88,14 +87,15 @@ class SMLConsole(gtk.ScrolledWindow):
         self.sml = subprocess.Popen([SML_COMMAND, '-P', 'full'],
                                     stdin  = subprocess.PIPE,
                                     stdout = subprocess.PIPE,
-                                    stderr = subprocess.PIPE)
+                                    stderr = subprocess.PIPE,
+                                    shell = False)
         
         def killSmlOnExit():
             self.sml.kill()
             
         import atexit
         atexit.register(killSmlOnExit)
-        
+       
         def transfer_data(from_f, to_f):
             while True:
                 c = from_f.read(1)
@@ -122,12 +122,9 @@ class SMLConsole(gtk.ScrolledWindow):
         self.namespace = None
 
     def __key_press_event_cb(self, view, event):
-        self.__locked_key_press_event_cb(view, event)
-        
-    def __locked_key_press_event_cb(self, view, event):
         modifier_mask = gtk.accelerator_get_default_mod_mask()
         event_state = event.state & modifier_mask
-
+    
         if event.keyval == gtk.keysyms.d and event_state == gtk.gdk.CONTROL_MASK:
             self.destroy()
 
@@ -162,11 +159,16 @@ class SMLConsole(gtk.ScrolledWindow):
             buffer = view.get_buffer()
             lin_mark = buffer.get_mark("input-line")
             inp_mark = buffer.get_mark("input")
+            
+            inp = buffer.get_iter_at_mark(inp_mark)
+            lin = buffer.get_iter_at_mark(lin_mark)
+            print "Input line: line %d, offset %d" % (lin.get_line(), lin.get_line_offset())
+            print "Input     : line %d, offset %d" % (inp.get_line(), inp.get_line_offset())
 
             # Get the command line
-            inp = buffer.get_iter_at_mark(inp_mark)
+            lin = buffer.get_iter_at_mark(lin_mark)
             cur = buffer.get_end_iter()
-            line = buffer.get_text(inp, cur)
+            line = buffer.get_text(lin, cur)
             self.current_command = self.current_command + line + "\n"
             self.history_add(line)
 
@@ -177,19 +179,11 @@ class SMLConsole(gtk.ScrolledWindow):
 
             cur_strip = self.current_command.rstrip()
 
-            if cur_strip.endswith(":") \
-            or (self.current_command[-2:] != "\n\n" and self.block_command):
-                # Unfinished block command
-                self.block_command = True
-                com_mark = "... "
-            elif cur_strip.endswith("\\"):
-                com_mark = "... "
-            else:
-                # Eval the command
-                self.__run(self.current_command)
-                self.current_command = ''
-                self.block_command = False
-                com_mark = ""#">>> "
+            # Eval the command
+            self.__run(self.current_command)
+            self.current_command = ''
+            self.block_command = False
+            com_mark = ""#">>> "
 
             # Prepare the new line
             cur = buffer.get_end_iter()
@@ -387,3 +381,4 @@ class OutFile:
     truncate = tell
 
 # ex:et:ts=4:
+
