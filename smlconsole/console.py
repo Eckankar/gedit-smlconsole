@@ -30,15 +30,12 @@ import pango
 import subprocess
 import threading
 import os
-import atexit
 
 from config import SMLConsoleConfig
 
 __all__ = ('SMLConsole', 'OutFile')
 
-#SML_COMMAND = (r"/home/simon/mosml/bin/camlrunm /home/simon/mosml/lib/mosmltop " +
-#               r"-stdlib /home/simon/mosml/lib -conservative -P full").split()
-SML_COMMAND = ["mosml", "-P", "full"]
+SML_COMMAND = [r'C:\Program Files\MosMLogEmacs\mosml\bin\mosml.exe', "-P", "full"]
 
 class SMLConsole(gtk.ScrolledWindow):
 
@@ -156,9 +153,9 @@ class SMLConsole(gtk.ScrolledWindow):
         modifier_mask = gtk.accelerator_get_default_mod_mask()
         event_state = event.state & modifier_mask
 
-        if event.keyval == gtk.keysyms.c or \
-           event.keyval == gtk.keysyms.d and \
-           event_state == gtk.gdk.CONTROL_MASK:
+        if (event.keyval == gtk.keysyms.c or \
+            event.keyval == gtk.keysyms.d) and \
+            event_state == gtk.gdk.CONTROL_MASK:
                self.sml.kill()
 
         if event.keyval == gtk.keysyms.r and event_state == gtk.gdk.CONTROL_MASK:
