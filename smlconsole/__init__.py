@@ -35,6 +35,7 @@ class SMLConsolePlugin(gedit.Plugin):
         self.dlg = None
 
     def activate(self, window):
+        print self.get_data_dir()
         console = SMLConsole(namespace = {'__builtins__' : __builtins__,
                                              'gedit' : gedit,
                                              'window' : window})
@@ -57,24 +58,19 @@ class SMLConsolePlugin(gedit.Plugin):
     def delete_event(self, widget, event):
         console = widget.get_data("SMLConsolePluginInfo")
         console.stop()
-        
 
-def create_configure_dialog(self):
-    if not self.dlg:
-        self.dlg = SMLConsoleConfigDialog(self.get_data_dir())
+    def is_configurable(self):
+        return True
 
-    dialog = self.dlg.dialog()
-    window = gedit.app_get_default().get_active_window()
-    if window:
-        dialog.set_transient_for(window)
+    def create_configure_dialog(self):
+        if not self.dlg:
+            self.dlg = SMLConsoleConfigDialog(self.get_data_dir())
 
-    return dialog
+        dialog = self.dlg.dialog()
+        window = gedit.app_get_default().get_active_window()
+        if window:
+            dialog.set_transient_for(window)
 
-# Here we dynamically insert create_configure_dialog based on if configuration
-# is enabled. This has to be done like this because gedit checks if a plugin
-# is configurable solely on the fact that it has this member defined or not
-if SMLConsoleConfig.enabled():
-    SMLConsolePlugin.create_configure_dialog = create_configure_dialog
+        return dialog
 
 # ex:et:ts=4:
-
