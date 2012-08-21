@@ -30,12 +30,14 @@ import pango
 import subprocess
 import threading
 import os
+import atexit
 
 from config import SMLConsoleConfig
 
 __all__ = ('SMLConsole', 'OutFile')
 
-SML_COMMAND = r'C:\Program Files\MosMLogEmacs\mosml\bin\mosml.exe'
+#SML_COMMAND = (r"/home/simon/mosml/bin/camlrunm /home/simon/mosml/lib/mosmltop " +
+#               r"-stdlib /home/simon/mosml/lib -conservative -P full").split()
 
 class SMLConsole(gtk.ScrolledWindow):
 
@@ -46,7 +48,7 @@ class SMLConsole(gtk.ScrolledWindow):
     def __init__(self, namespace = {}):
         gtk.ScrolledWindow.__init__(self)
         gtk.gdk.threads_init()
-        
+
         self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         self.set_shadow_type(gtk.SHADOW_IN)
         self.view = gtk.TextView()
@@ -55,7 +57,7 @@ class SMLConsole(gtk.ScrolledWindow):
         self.view.set_wrap_mode(gtk.WRAP_WORD_CHAR)
         self.add(self.view)
         self.view.show()
-        
+
         buffer = self.view.get_buffer()
         self.normal = buffer.create_tag("normal")
         self.error  = buffer.create_tag("error")
@@ -84,29 +86,25 @@ class SMLConsole(gtk.ScrolledWindow):
         self.stderr = OutFile(self, sys.stderr.fileno(), self.error)
 
         self.start_sml()
-        
+
         def killSmlOnExit():
-            self.sml.kill()
-            
-        import atexit
+            self.sml.terminate()
+
         atexit.register(killSmlOnExit)
-       
+
         def transfer_data(from_f, to_f):
             while True:
-                try:
-                    c = from_f.read(1)
-                    if c == '\r': continue
-                    to_f.write(c)
-                except e:
-                    print e
-        
+                c = from_f.read(1)
+                if c == '\r': continue
+                to_f.write(c)
+
         stdoutt = threading.Thread(target = transfer_data, args = (self.sml.stdout, self.stdout))
         stdoutt.daemon = True
-        stdoutt.start()        
+        stdoutt.start()
         stderrt = threading.Thread(target = transfer_data, args = (self.sml.stderr, self.stderr))
         stderrt.daemon = True
         stderrt.start()
-                                    
+
         # Signals
         self.view.connect("key-press-event", self.__key_press_event_cb)
         buffer.connect("mark-set", self.__mark_set_cb)
@@ -116,13 +114,13 @@ class SMLConsole(gtk.ScrolledWindow):
         if os.name == 'nt':
             startupInfo = subprocess.STARTUPINFO()
             startupInfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        self.sml = subprocess.Popen([SML_COMMAND, '-P', 'full'],
+        self.sml = subprocess.Popen(SML_COMMAND,
                                     stdin  = subprocess.PIPE,
                                     stdout = subprocess.PIPE,
                                     stderr = subprocess.PIPE,
                                     shell = False,
                                     startupinfo = startupInfo)
-        
+
     def do_grab_focus(self):
         self.view.grab_focus()
 
@@ -132,12 +130,13 @@ class SMLConsole(gtk.ScrolledWindow):
         self.command.set_property("foreground", config.color_command)
 
     def stop(self):
+        self.sml.terminate()
         self.namespace = None
 
     def __key_press_event_cb(self, view, event):
         modifier_mask = gtk.accelerator_get_default_mod_mask()
         event_state = event.state & modifier_mask
-    
+
         if event.keyval == gtk.keysyms.d and event_state == gtk.gdk.CONTROL_MASK:
             self.destroy()
 
@@ -171,13 +170,12 @@ class SMLConsole(gtk.ScrolledWindow):
             # Get the marks
             buffer = view.get_buffer()
             lin_mark = buffer.get_mark("input-line")
-            
+
             # Get the command line
             lin = buffer.get_iter_at_mark(lin_mark)
             cur = buffer.get_end_iter()
             line = buffer.get_text(lin, cur)
             self.current_command = self.current_command + line + "\n"
-            print repr(self.current_command)
             self.history_add(line)
 
             # Make the line blue
@@ -358,11 +356,12 @@ class SMLConsole(gtk.ScrolledWindow):
     def __run(self, command):
         self.sml.stdin.write(command)
         self.sml.stdin.flush()
+
         return
-        
+
     def destroy(self):
-        self.sml.terminate()
         pass
+        #self.sml.terminate()
         #gtk.ScrolledWindow.destroy(self)
 
 class OutFile:
