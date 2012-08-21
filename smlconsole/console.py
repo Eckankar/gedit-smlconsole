@@ -143,7 +143,10 @@ class SMLConsole(gtk.ScrolledWindow):
     def stop(self):
         self.namespace = None
         self.kill_sml = True
-        self.sml.kill()
+        try:
+            self.sml.kill()
+        except:
+            pass
         self.sml = None
 
     def __key_press_event_cb(self, view, event):
@@ -152,6 +155,10 @@ class SMLConsole(gtk.ScrolledWindow):
     
         if event.keyval == gtk.keysyms.c and event_state == gtk.gdk.CONTROL_MASK:
             self.sml.kill()
+            
+        if event.keyval == gtk.keysyms.r and event_state == gtk.gdk.CONTROL_MASK:
+            document = self.namespace['window'].get_active_document()
+            self.eval( document.get_text( document.get_start_iter(), document.get_end_iter() ) + "\n", display_command = True )
 
         elif event.keyval == gtk.keysyms.Return and event_state == gtk.gdk.CONTROL_MASK:
             # Get the command
@@ -356,7 +363,7 @@ class SMLConsole(gtk.ScrolledWindow):
                 self.__run(c)
         else:
             if display_command:
-                self.write(c + "\n", self.command)
+                self.write(command + "\n", self.command)
             self.__run(command)
 
         cur = buffer.get_end_iter()
