@@ -144,7 +144,6 @@ class SMLConsole(gtk.ScrolledWindow):
         self.command.set_property("foreground", config.color_command)
 
     def stop(self):
-        self.sml.terminate()
         self.namespace = None
         self.kill_sml = True
         self.sml.kill()
