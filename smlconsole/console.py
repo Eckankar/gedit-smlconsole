@@ -83,6 +83,7 @@ class SMLConsole(gtk.ScrolledWindow):
         self.stdout = OutFile(self, sys.stdout.fileno(), self.normal)
         self.stderr = OutFile(self, sys.stderr.fileno(), self.error)
 
+        self.sml = None
         self.kill_sml = False
         self.start_sml()
                                     
@@ -93,6 +94,13 @@ class SMLConsole(gtk.ScrolledWindow):
     def start_sml(self):
         if self.kill_sml:
             return
+            
+        if self.sml:
+            try:
+                self.sml.kill()
+            except:
+                pass
+            self.sml = None
 
         startupInfo = None
         if os.name == 'nt':
@@ -110,17 +118,19 @@ class SMLConsole(gtk.ScrolledWindow):
                 while True:
                     c = from_f.read(1)
                     if c == '\r': continue
+                    if c == '': break
                     to_f.write(c)
             except e:
                 print e
+            self.start_sml()
                 
         
         stdoutt = threading.Thread(target = transfer_data, args = (self.sml.stdout, self.stdout))
         stdoutt.daemon = True
         stdoutt.start()        
-        stderrt = threading.Thread(target = transfer_data, args = (self.sml.stderr, self.stderr))
-        stderrt.daemon = True
-        stderrt.start()
+        #stderrt = threading.Thread(target = transfer_data, args = (self.sml.stderr, self.stderr))
+        #stderrt.daemon = True
+        #stderrt.start()
         
     def do_grab_focus(self):
         self.view.grab_focus()
@@ -132,7 +142,9 @@ class SMLConsole(gtk.ScrolledWindow):
 
     def stop(self):
         self.namespace = None
+        self.kill_sml = True
         self.sml.kill()
+        self.sml = None
 
     def __key_press_event_cb(self, view, event):
         modifier_mask = gtk.accelerator_get_default_mod_mask()
