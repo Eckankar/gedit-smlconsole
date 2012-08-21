@@ -120,7 +120,7 @@ class SMLConsole(gtk.ScrolledWindow):
                     if c == '\r': continue
                     if c == '': break
                     to_f.write(c)
-            except e:
+            except Exception, e:
                 print e
             self.start_sml()
                 
@@ -370,7 +370,7 @@ class SMLConsole(gtk.ScrolledWindow):
         try:
             self.sml.stdin.write(command)
             self.sml.stdin.flush()
-        except e:
+        except Exception, e:
             print e
             self.start_sml()
         return
