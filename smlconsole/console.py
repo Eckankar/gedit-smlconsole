@@ -150,8 +150,8 @@ class SMLConsole(gtk.ScrolledWindow):
         modifier_mask = gtk.accelerator_get_default_mod_mask()
         event_state = event.state & modifier_mask
     
-        if event.keyval == gtk.keysyms.d and event_state == gtk.gdk.CONTROL_MASK:
-            self.destroy()
+        if event.keyval == gtk.keysyms.c and event_state == gtk.gdk.CONTROL_MASK:
+            self.sml.kill()
 
         elif event.keyval == gtk.keysyms.Return and event_state == gtk.gdk.CONTROL_MASK:
             # Get the command
