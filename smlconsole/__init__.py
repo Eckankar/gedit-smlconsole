@@ -60,7 +60,6 @@ class SMLConsolePlugin(gedit.Plugin):
         
 
 def create_configure_dialog(self):
-
     if not self.dlg:
         self.dlg = SMLConsoleConfigDialog(self.get_data_dir())
 
