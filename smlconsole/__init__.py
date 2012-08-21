@@ -45,6 +45,7 @@ class SMLConsolePlugin(gedit.Plugin):
         image.set_from_icon_name(SML_ICON, gtk.ICON_SIZE_MENU)
         bottom.add_item(console, 'SML Console', image)
         window.set_data('SMLConsolePluginInfo', console)
+        window.connect('delete-event', self.delete_event)
 
     def deactivate(self, window):
         console = window.get_data("SMLConsolePluginInfo")
@@ -52,6 +53,11 @@ class SMLConsolePlugin(gedit.Plugin):
         window.set_data("SMLConsolePluginInfo", None)
         bottom = window.get_bottom_panel()
         bottom.remove_item(console)
+        
+    def delete_event(self, widget, event):
+        console = widget.get_data("SMLConsolePluginInfo")
+        console.stop()
+        
 
 def create_configure_dialog(self):
 

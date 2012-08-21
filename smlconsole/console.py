@@ -83,35 +83,17 @@ class SMLConsole(gtk.ScrolledWindow):
         self.stdout = OutFile(self, sys.stdout.fileno(), self.normal)
         self.stderr = OutFile(self, sys.stderr.fileno(), self.error)
 
+        self.kill_sml = False
         self.start_sml()
-        
-        def killSmlOnExit():
-            self.sml.kill()
-            
-        import atexit
-        atexit.register(killSmlOnExit)
-       
-        def transfer_data(from_f, to_f):
-            while True:
-                try:
-                    c = from_f.read(1)
-                    if c == '\r': continue
-                    to_f.write(c)
-                except e:
-                    print e
-        
-        stdoutt = threading.Thread(target = transfer_data, args = (self.sml.stdout, self.stdout))
-        stdoutt.daemon = True
-        stdoutt.start()        
-        stderrt = threading.Thread(target = transfer_data, args = (self.sml.stderr, self.stderr))
-        stderrt.daemon = True
-        stderrt.start()
                                     
         # Signals
         self.view.connect("key-press-event", self.__key_press_event_cb)
         buffer.connect("mark-set", self.__mark_set_cb)
 
     def start_sml(self):
+        if self.kill_sml:
+            return
+
         startupInfo = None
         if os.name == 'nt':
             startupInfo = subprocess.STARTUPINFO()
@@ -122,6 +104,23 @@ class SMLConsole(gtk.ScrolledWindow):
                                     stderr = subprocess.PIPE,
                                     shell = False,
                                     startupinfo = startupInfo)
+                                    
+        def transfer_data(from_f, to_f):
+            try:
+                while True:
+                    c = from_f.read(1)
+                    if c == '\r': continue
+                    to_f.write(c)
+            except e:
+                print e
+                
+        
+        stdoutt = threading.Thread(target = transfer_data, args = (self.sml.stdout, self.stdout))
+        stdoutt.daemon = True
+        stdoutt.start()        
+        stderrt = threading.Thread(target = transfer_data, args = (self.sml.stderr, self.stderr))
+        stderrt.daemon = True
+        stderrt.start()
         
     def do_grab_focus(self):
         self.view.grab_focus()
@@ -133,6 +132,7 @@ class SMLConsole(gtk.ScrolledWindow):
 
     def stop(self):
         self.namespace = None
+        self.sml.kill()
 
     def __key_press_event_cb(self, view, event):
         modifier_mask = gtk.accelerator_get_default_mod_mask()
@@ -177,7 +177,6 @@ class SMLConsole(gtk.ScrolledWindow):
             cur = buffer.get_end_iter()
             line = buffer.get_text(lin, cur)
             self.current_command = self.current_command + line + "\n"
-            print repr(self.current_command)
             self.history_add(line)
 
             # Make the line blue
@@ -356,12 +355,16 @@ class SMLConsole(gtk.ScrolledWindow):
         self.view.scroll_to_iter(cur, 0.0)
 
     def __run(self, command):
-        self.sml.stdin.write(command)
-        self.sml.stdin.flush()
+        try:
+            self.sml.stdin.write(command)
+            self.sml.stdin.flush()
+        except e:
+            print e
+            self.start_sml()
         return
         
     def destroy(self):
-        self.sml.terminate()
+        #self.sml.terminate()
         pass
         #gtk.ScrolledWindow.destroy(self)
 
