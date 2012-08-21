@@ -123,7 +123,7 @@ class SMLConsole(gtk.ScrolledWindow):
                     if c == '\r': continue
                     if c == '': break
                     to_f.write(c)
-            except e:
+            except Exception, e:
                 print e
             self.start_sml()
                 
@@ -153,8 +153,10 @@ class SMLConsole(gtk.ScrolledWindow):
         modifier_mask = gtk.accelerator_get_default_mod_mask()
         event_state = event.state & modifier_mask
 
-        if event.keyval == gtk.keysyms.d and event_state == gtk.gdk.CONTROL_MASK:
-            self.destroy()
+        if event.keyval == gtk.keysyms.c or \
+           event.keyval == gtk.keysyms.d and \
+           event_state == gtk.gdk.CONTROL_MASK:
+               self.sml.kill()
 
         elif event.keyval == gtk.keysyms.Return and event_state == gtk.gdk.CONTROL_MASK:
             # Get the command
@@ -373,7 +375,7 @@ class SMLConsole(gtk.ScrolledWindow):
         try:
             self.sml.stdin.write(command)
             self.sml.stdin.flush()
-        except e:
+        except Exception, e:
             print e
             self.start_sml()
         return
