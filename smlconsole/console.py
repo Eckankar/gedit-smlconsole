@@ -106,7 +106,6 @@ class SMLConsole(gtk.ScrolledWindow):
 
         config = SMLConsoleConfig()
         sml_command = [config.sml_interpreter] + shlex.split(config.sml_flags)
-        print sml_command
         self.sml = subprocess.Popen(sml_command,
                                     stdin  = subprocess.PIPE,
                                     stdout = subprocess.PIPE,
@@ -358,7 +357,6 @@ class SMLConsole(gtk.ScrolledWindow):
         gobject.idle_add(self.scroll_to_end)
 
     def eval(self, command, display_command = False):
-        print "eval"
         buffer = self.view.get_buffer()
         lin = buffer.get_mark("input-line")
         buffer.delete(buffer.get_iter_at_mark(lin),
