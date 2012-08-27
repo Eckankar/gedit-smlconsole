@@ -29,12 +29,11 @@ import gtk
 import pango
 import subprocess
 import os
+import shlex
 
 from config import SMLConsoleConfig
 
 __all__ = ('SMLConsole', 'OutFile')
-
-SML_COMMAND = [r'C:\Program Files\MosMLogEmacs\mosml\bin\mosml.exe', "-P", "full"]
 
 class SMLConsole(gtk.ScrolledWindow):
 
@@ -92,7 +91,7 @@ class SMLConsole(gtk.ScrolledWindow):
     def start_sml(self):
         if self.kill_sml:
             return
-            
+
         if self.sml:
             try:
                 self.sml.kill()
@@ -104,7 +103,11 @@ class SMLConsole(gtk.ScrolledWindow):
         if os.name == 'nt':
             startupInfo = subprocess.STARTUPINFO()
             startupInfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        self.sml = subprocess.Popen(SML_COMMAND,
+
+        config = SMLConsoleConfig()
+        sml_command = [config.sml_interpreter] + shlex.split(config.sml_flags)
+        print sml_command
+        self.sml = subprocess.Popen(sml_command,
                                     stdin  = subprocess.PIPE,
                                     stdout = subprocess.PIPE,
                                     stderr = subprocess.PIPE,
@@ -118,9 +121,9 @@ class SMLConsole(gtk.ScrolledWindow):
                 self.stderr.write(serr)
             except Exception, e:
                 self.start_sml()
-                
-        gtk.timeout_add(100, grab_io)
-                                    
+
+        gobject.timeout_add(100, grab_io)
+
         def transfer_data(from_f, to_f):
             try:
                 while True:
@@ -133,7 +136,7 @@ class SMLConsole(gtk.ScrolledWindow):
                 print e
             self.start_sml()
 
-        
+
     def do_grab_focus(self):
         self.view.grab_focus()
 
@@ -297,7 +300,7 @@ class SMLConsole(gtk.ScrolledWindow):
     def __mark_set_cb(self, buffer, iter, mark):
         mark_name = mark.get_name()
         if mark_name in ['input', 'input-line', 'tmp-input-line', None]: return
-        
+
         input = buffer.get_iter_at_mark(buffer.get_mark("input-line"))
         pos   = buffer.get_iter_at_mark(buffer.get_insert())
         self.view.set_editable(pos.compare(input) != -1)
