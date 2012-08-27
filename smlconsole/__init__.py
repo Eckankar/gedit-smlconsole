@@ -35,7 +35,6 @@ class SMLConsolePlugin(gedit.Plugin):
         self.dlg = None
 
     def activate(self, window):
-        print self.get_data_dir()
         console = SMLConsole(namespace = {'__builtins__' : __builtins__,
                                              'gedit' : gedit,
                                              'window' : window})
@@ -46,23 +45,13 @@ class SMLConsolePlugin(gedit.Plugin):
         image.set_from_icon_name(SML_ICON, gtk.ICON_SIZE_MENU)
         bottom.add_item(console, 'SML Console', image)
         window.set_data('SMLConsolePluginInfo', console)
-        del_id = window.connect('delete-event', self.delete_event)
-        window.set_data('SMLConsoleDeleteEventId', del_id)
 
     def deactivate(self, window):
-        self.general_cleanup(window)
-        bottom = window.get_bottom_panel()
-        bottom.remove_item(console)
-
-    def delete_event(self, widget, event):
-        self.general_cleanup(widget)
-
-    def general_cleanup(self, window):
         console = window.get_data("SMLConsolePluginInfo")
         console.stop()
         window.set_data("SMLConsolePluginInfo", None)
-        window.disconnect( window.get_data('SMLConsoleDeleteEventId') )
-        window.set_data('SMLConsoleDeleteEventId', None)
+        bottom = window.get_bottom_panel()
+        bottom.remove_item(console)
 
     def is_configurable(self):
         return True

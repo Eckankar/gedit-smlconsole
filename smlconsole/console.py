@@ -28,7 +28,6 @@ import gobject
 import gtk
 import pango
 import subprocess
-import threading
 import os
 
 from config import SMLConsoleConfig
@@ -45,7 +44,6 @@ class SMLConsole(gtk.ScrolledWindow):
 
     def __init__(self, namespace = {}):
         gtk.ScrolledWindow.__init__(self)
-        gtk.gdk.threads_init()
 
         self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         self.set_shadow_type(gtk.SHADOW_IN)
@@ -113,24 +111,28 @@ class SMLConsole(gtk.ScrolledWindow):
                                     shell = False,
                                     startupinfo = startupInfo)
 
+        def grab_io(*args):
+            try:
+                (sout, serr) = self.sml.communicate()
+                self.stdout.write(sout)
+                self.stderr.write(serr)
+            except Exception, e:
+                self.start_sml()
+                
+        gtk.timeout_add(100, grab_io)
+                                    
         def transfer_data(from_f, to_f):
             try:
                 while True:
                     c = from_f.read(1)
                     if c == '\r': continue
+                    if self.kill_sml: return
                     if c == '': break
                     to_f.write(c)
             except Exception, e:
                 print e
             self.start_sml()
-                
-        
-        stdoutt = threading.Thread(target = transfer_data, args = (self.sml.stdout, self.stdout))
-        stdoutt.daemon = True
-        stdoutt.start()        
-        #stderrt = threading.Thread(target = transfer_data, args = (self.sml.stderr, self.stderr))
-        #stderrt.daemon = True
-        #stderrt.start()
+
         
     def do_grab_focus(self):
         self.view.grab_focus()
@@ -353,6 +355,7 @@ class SMLConsole(gtk.ScrolledWindow):
         gobject.idle_add(self.scroll_to_end)
 
     def eval(self, command, display_command = False):
+        print "eval"
         buffer = self.view.get_buffer()
         lin = buffer.get_mark("input-line")
         buffer.delete(buffer.get_iter_at_mark(lin),
@@ -370,7 +373,6 @@ class SMLConsole(gtk.ScrolledWindow):
 
         cur = buffer.get_end_iter()
         buffer.move_mark_by_name("input-line", cur)
-        #buffer.insert(cur, ">>> ")
         cur = buffer.get_end_iter()
         buffer.move_mark_by_name("input-line", cur)
         self.view.scroll_to_iter(cur, 0.0)
@@ -386,8 +388,6 @@ class SMLConsole(gtk.ScrolledWindow):
 
     def destroy(self):
         pass
-        #self.sml.terminate()
-        #gtk.ScrolledWindow.destroy(self)
 
 class OutFile:
     """A fake output file object. It sends output to a TK test widget,
@@ -403,10 +403,8 @@ class OutFile:
     def read(self, a):       return ''
     def readline(self):      return ''
     def readlines(self):     return []
-    def write(self, s):
-        gobject.idle_add(self.console.write, s, self.tag)
-    def writelines(self, l):
-        gobject.idle_add(self.console.write, l, self.tag)
+    def write(self, s):      gobject.idle_add(self.console.write, s, self.tag)
+    def writelines(self, l): gobject.idle_add(self.console.write, l, self.tag)
     def seek(self, a):       raise IOError, (29, 'Illegal seek')
     def tell(self):          raise IOError, (29, 'Illegal seek')
     truncate = tell
