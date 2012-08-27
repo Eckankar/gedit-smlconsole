@@ -37,6 +37,7 @@ DEFAULT_SML_INTERPRETERS = [
     r'C:\Program Files\Moscow ML\bin\mosml.exe',
     r'C:\Program Files\MosMLogEmacs\mosml\bin\mosml.exe',
     r'/usr/bin/mosml',
+    r'/usr/bin/sml',
 ]
 DEFAULT_SML_FLAGS = '-P full'
 
