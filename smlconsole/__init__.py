@@ -37,7 +37,8 @@ class SMLConsolePlugin(gedit.Plugin):
     def activate(self, window):
         console = SMLConsole(namespace = {'__builtins__' : __builtins__,
                                              'gedit' : gedit,
-                                             'window' : window})
+                                             'window' : window,
+                                             'datadir' : self.get_data_dir(), })
         #console.eval('print "You can access the main window through ' \
         #             '\'window\' :\\n%s" % window', False)
         bottom = window.get_bottom_panel()

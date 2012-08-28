@@ -35,6 +35,8 @@ from config import SMLConsoleConfig
 
 __all__ = ('SMLConsole', 'OutFile')
 
+COPY_DATA_APP_WINDOWS = 'CopyData.exe'
+
 class SMLConsole(gtk.ScrolledWindow):
 
     __gsignals__ = {
@@ -109,31 +111,46 @@ class SMLConsole(gtk.ScrolledWindow):
         self.sml = subprocess.Popen(sml_command,
                                     stdin  = subprocess.PIPE,
                                     stdout = subprocess.PIPE,
-                                    stderr = subprocess.PIPE,
+                                    stderr = subprocess.STDOUT,
                                     shell = False,
                                     startupinfo = startupInfo)
 
-        def grab_io(*args):
-            try:
-                (sout, serr) = self.sml.communicate()
-                self.stdout.write(sout)
-                self.stderr.write(serr)
-            except Exception, e:
-                self.start_sml()
+        if os.name != 'nt': # Pipes cannot be set non-blocking on Windows
+            import fcntl
+            fcntl.fcntl(self.sml.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
-        gobject.timeout_add(100, grab_io)
+        gobject.timeout_add(100, self.do_communication)
 
-        def transfer_data(from_f, to_f):
-            try:
+    def do_communication(self):
+        try:
+            if os.name == 'nt':
+                # Start a process, which copies what it can from its stdin (MosMLs stdout) to its stdout, then dies.
+                # Doing this since we cannot do a non-blocking read from the stdout on Windows.
+                # We can, however, read all the other process wants to output after it's dead.
+                startupInfo = subprocess.STARTUPINFO()
+                startupInfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                proc = subprocess.Popen(os.path.join(self.namespace['datadir'], COPY_DATA_APP_WINDOWS),
+                                        stdin  = self.sml.stdout,
+                                        stdout = subprocess.PIPE,
+                                        stderr = subprocess.STDOUT,
+                                        shell = False,
+                                        startupinfo = startupInfo)
+                (outd, errd) = proc.communicate()
+                self.stdout.write(outd)
+            else:
+                data = ""
                 while True:
-                    c = from_f.read(1)
-                    if c == '\r': continue
-                    if self.kill_sml: return
+                    c = self.sml.stdout.read(1)
                     if c == '': break
-                    to_f.write(c)
-            except Exception, e:
-                print e
+                    data += c
+                self.stdout.write(data)
+        except Exception, e:
+            pass
+
+        if self.sml.poll():
             self.start_sml()
+
+        gobject.timeout_add(100, self.do_communication)
 
 
     def do_grab_focus(self):
@@ -357,6 +374,7 @@ class SMLConsole(gtk.ScrolledWindow):
         gobject.idle_add(self.scroll_to_end)
 
     def eval(self, command, display_command = False):
+        print "eval"
         buffer = self.view.get_buffer()
         lin = buffer.get_mark("input-line")
         buffer.delete(buffer.get_iter_at_mark(lin),
