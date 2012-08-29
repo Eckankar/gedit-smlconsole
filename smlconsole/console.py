@@ -2,7 +2,7 @@
 
 # smlconsole.py -- Console widget
 #
-# Copyright (C) 2012 - Sebastian Paaske Tørholm
+# Copyright (C) 2012 - Sebastian Paaske TÃ¸rholm
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -85,6 +85,8 @@ class SMLConsole(gtk.ScrolledWindow):
         self.sml = None
         self.kill_sml = False
         self.start_sml()
+        
+        gobject.timeout_add(100, self.do_communication)
 
         # Signals
         self.view.connect("key-press-event", self.__key_press_event_cb)
@@ -119,8 +121,6 @@ class SMLConsole(gtk.ScrolledWindow):
             import fcntl
             fcntl.fcntl(self.sml.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
-        gobject.timeout_add(100, self.do_communication)
-
     def do_communication(self):
         try:
             if os.name == 'nt':
@@ -147,7 +147,7 @@ class SMLConsole(gtk.ScrolledWindow):
         except Exception, e:
             pass
 
-        if self.sml.poll():
+        if self.sml.poll() is not None:
             self.start_sml()
 
         gobject.timeout_add(100, self.do_communication)

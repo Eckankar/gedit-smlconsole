@@ -11,13 +11,14 @@ namespace CopyData {
                 ReadDelegate d = System.Console.Read;
                 IAsyncResult res = d.BeginInvoke(null, null);
                 res.AsyncWaitHandle.WaitOne(10); // 10 ms blocking wait
-                if (res.IsCompleted) {
-                    data += Convert.ToChar(d.EndInvoke(res));
-                } else {
-                    System.Console.Write(data);
-                    return;    
-                }
+                if (!res.IsCompleted) break;
+                
+                int result = d.EndInvoke(res);
+                if (result == -1) break; // End of stream
+                data += Convert.ToChar(result);
             }
+            System.Console.Write(data);
+            return;    
         }
 
         delegate int ReadDelegate();
