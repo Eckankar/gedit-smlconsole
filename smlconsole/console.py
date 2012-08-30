@@ -2,7 +2,7 @@
 
 # smlconsole.py -- Console widget
 #
-# Copyright (C) 2012 - Sebastian Paaske TÃ¸rholm
+# Copyright (C) 2012 - Sebastian Paaske Tørholm
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ from config import SMLConsoleConfig
 __all__ = ('SMLConsole', 'OutFile')
 
 COPY_DATA_APP_WINDOWS = 'CopyData.exe'
+DATA_UPDATE_DELAY = 250
 
 class SMLConsole(gtk.ScrolledWindow):
 
@@ -86,7 +87,7 @@ class SMLConsole(gtk.ScrolledWindow):
         self.kill_sml = False
         self.start_sml()
         
-        gobject.timeout_add(100, self.do_communication)
+        gobject.timeout_add(DATA_UPDATE_DELAY, self.do_communication)
 
         # Signals
         self.view.connect("key-press-event", self.__key_press_event_cb)
@@ -150,7 +151,7 @@ class SMLConsole(gtk.ScrolledWindow):
         if self.sml.poll() is not None:
             self.start_sml()
 
-        gobject.timeout_add(100, self.do_communication)
+        gobject.timeout_add(DATA_UPDATE_DELAY, self.do_communication)
 
 
     def do_grab_focus(self):
@@ -181,6 +182,7 @@ class SMLConsole(gtk.ScrolledWindow):
 
         if event.keyval == gtk.keysyms.r and event_state == gtk.gdk.CONTROL_MASK:
             document = self.namespace['window'].get_active_document()
+            self.start_sml()
             self.eval( document.get_text( document.get_start_iter(), document.get_end_iter() ) + "\n", display_command = True )
 
         elif event.keyval == gtk.keysyms.Return and event_state == gtk.gdk.CONTROL_MASK:
@@ -374,7 +376,6 @@ class SMLConsole(gtk.ScrolledWindow):
         gobject.idle_add(self.scroll_to_end)
 
     def eval(self, command, display_command = False):
-        print "eval"
         buffer = self.view.get_buffer()
         lin = buffer.get_mark("input-line")
         buffer.delete(buffer.get_iter_at_mark(lin),
