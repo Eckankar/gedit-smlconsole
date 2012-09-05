@@ -15,4 +15,4 @@ gedit, and the plugin should be listed in the plugin list
 
 Windows
 -------
-TODO
+Download the Windows installer from https://github.com/Eckankar/gedit-smlconsole/downloads .
