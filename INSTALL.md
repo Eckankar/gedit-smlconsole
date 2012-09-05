@@ -3,15 +3,11 @@ Installation instructions
 
 Linux
 -----
-This guide assumes that you have gedit 2 or newer installed.
+This guide assumes that you have gedit 2.x installed. Note: This plugin does not work with gedit 3.x.
 
-Copy the following files and folders to your gedit plugin folder:
+Copy the following files and folders to your gedit plugin folder (`~/.gnome2/gedit/plugins/`):
 * smlconsole.gedit-plugin
 * smlconsole/ (including files)
-
-Your plugin folder is located here:
-* `~/.local/share/gedit/plugins/` for gedit 3.
-* `~/.gnome2/gedit/plugins/` for gedit 2.
 
 Once you've copied the files to the appropriate folder, restart
 gedit, and the plugin should be listed in the plugin list
